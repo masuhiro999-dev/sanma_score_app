@@ -93,7 +93,6 @@ function initNavigation() {
 // 1. Input Screen Logic
 // ==========================================
 let selectedPlayers = [];
-let topPlayerName = "";
 
 function renderPlayerSelection() {
   const grid = document.getElementById("playerSelectGrid");
@@ -130,9 +129,7 @@ function renderPlayerSelection() {
 }
 
 function updateScoreInputArea() {
-  const container = document.getElementById("scoreInputsContainer");
   const card = document.getElementById("scoreInputCard");
-  const topSelect = document.getElementById("topPlayerSelect");
   const errorMsg = document.getElementById("validationError");
   errorMsg.style.display = "none";
 
@@ -142,26 +139,6 @@ function updateScoreInputArea() {
   }
 
   card.style.display = "block";
-
-  // Select top player logic
-  if (!selectedPlayers.includes(topPlayerName)) {
-    topPlayerName = selectedPlayers[0];
-  }
-
-  topSelect.innerHTML = "";
-  selectedPlayers.forEach(p => {
-    const opt = document.createElement("option");
-    opt.value = p;
-    opt.textContent = p;
-    if (p === topPlayerName) opt.selected = true;
-    topSelect.appendChild(opt);
-  });
-
-  topSelect.onchange = (e) => {
-    topPlayerName = e.target.value;
-    renderScoreInputRows();
-  };
-
   renderScoreInputRows();
 }
 
@@ -170,61 +147,155 @@ function renderScoreInputRows() {
   container.innerHTML = "";
 
   selectedPlayers.forEach(player => {
-    const isTop = player === topPlayerName;
     const row = document.createElement("div");
     row.className = "score-row";
 
     row.innerHTML = `
       <label>${player}</label>
-      <input type="number" id="score_input_${player}" placeholder="点数を入力" ${isTop ? 'readonly' : ''}>
-      <span class="role-badge ${isTop ? 'top' : 'inputter'}">${isTop ? 'トップ' : '入力者'}</span>
+      <input type="number" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="例: -30 (正の数で自動-)" step="any">
+      <span class="role-badge inputter" id="badge_${player}">入力欄</span>
     `;
 
     container.appendChild(row);
   });
+
+  // 自動マイナス補正 & 入力時自動計算イベント
+  selectedPlayers.forEach(player => {
+    const inputEl = document.getElementById(`score_input_${player}`);
+    
+    inputEl.addEventListener("blur", () => {
+      const valStr = inputEl.value.trim();
+      if (valStr !== "" && !isNaN(valStr)) {
+        const num = Number(valStr);
+        // プラスの数値が入力された場合、自動でマイナスにする (例: 35 -> -35)
+        if (num > 0) {
+          inputEl.value = -num;
+        }
+      }
+      autoDetectAndCalculateTop();
+    });
+
+    inputEl.addEventListener("input", () => {
+      autoDetectAndCalculateTop();
+    });
+  });
 }
 
-function calculateTopScore() {
+// 2名の点数が入力されたら、未入力の最後の1名をトップとして自動計算
+function autoDetectAndCalculateTop() {
   if (selectedPlayers.length !== 3) return false;
 
-  let otherSum = 0;
-  let hasEmpty = false;
+  const filled = [];
+  const empty = [];
 
   selectedPlayers.forEach(player => {
-    if (player !== topPlayerName) {
-      const val = document.getElementById(`score_input_${player}`).value;
-      if (val === "" || isNaN(val)) {
-        hasEmpty = true;
-      } else {
-        otherSum += Number(val);
-      }
+    const inputEl = document.getElementById(`score_input_${player}`);
+    const val = inputEl ? inputEl.value.trim() : "";
+    if (val !== "" && !isNaN(val)) {
+      filled.push({ player, val: Number(val) });
+    } else {
+      empty.push(player);
     }
   });
 
-  if (hasEmpty) {
-    showError("トップ以外のプレイヤーの点数を両方入力してください");
-    return false;
+  // リセット表示
+  selectedPlayers.forEach(player => {
+    const badge = document.getElementById(`badge_${player}`);
+    const inputEl = document.getElementById(`score_input_${player}`);
+    if (badge) {
+      badge.textContent = "入力欄";
+      badge.className = "role-badge inputter";
+    }
+    if (inputEl && inputEl.hasAttribute("data-auto-top")) {
+      inputEl.removeAttribute("data-auto-top");
+      inputEl.style.color = "var(--text-main)";
+    }
+  });
+
+  // ちょうど2名が入力済みで、1名が未入力の場合に自動計算
+  if (filled.length === 2 && empty.length === 1) {
+    const topPlayer = empty[0];
+    const sumOthers = filled[0].val + filled[1].val;
+    const topScore = 0 - sumOthers;
+
+    const topInput = document.getElementById(`score_input_${topPlayer}`);
+    const topBadge = document.getElementById(`badge_${topPlayer}`);
+
+    if (topInput && topBadge) {
+      topInput.value = topScore;
+      topInput.setAttribute("data-auto-top", "true");
+      topInput.style.color = "var(--accent-gold)";
+      topBadge.textContent = "トップ(自動)";
+      topBadge.className = "role-badge top";
+    }
+
+    filled.forEach(f => {
+      const b = document.getElementById(`badge_${f.player}`);
+      if (b) {
+        b.textContent = "入力者";
+        b.className = "role-badge inputter";
+      }
+    });
+
+    hideError();
+    return true;
+  } else if (filled.length === 3) {
+    const total = filled.reduce((acc, curr) => acc + curr.val, 0);
+    if (total === 0) {
+      hideError();
+    } else {
+      showError(`現在の合計: ${total > 0 ? '+' + total : total} (合計が0になりません)`);
+    }
   }
 
-  // 自動計算: 3人の合計が0になるよう、「トップの点数 = 0 - (A + B)」
-  const topScore = 0 - otherSum;
-  document.getElementById(`score_input_${topPlayerName}`).value = topScore;
-  hideError();
-  return true;
+  return false;
+}
+
+function calculateTopScore() {
+  const isCalculated = autoDetectAndCalculateTop();
+  if (!isCalculated) {
+    const filledCount = selectedPlayers.filter(p => {
+      const v = document.getElementById(`score_input_${p}`).value.trim();
+      return v !== "" && !isNaN(v);
+    }).length;
+
+    if (filledCount < 2) {
+      showError("2名の点数を入力してください。未入力の1名がトップとして自動計算されます。");
+    }
+  }
 }
 
 function handleSaveGame() {
-  const errorMsg = document.getElementById("validationError");
   if (selectedPlayers.length !== 3) {
     showError("プレイヤーを3名選択してください");
     return;
   }
 
-  if (!calculateTopScore()) return;
+  autoDetectAndCalculateTop();
+
+  let totalCheck = 0;
+  let missingCount = 0;
+
+  selectedPlayers.forEach(p => {
+    const valStr = document.getElementById(`score_input_${p}`).value.trim();
+    if (valStr === "" || isNaN(valStr)) {
+      missingCount++;
+    } else {
+      totalCheck += Number(valStr);
+    }
+  });
+
+  if (missingCount > 0) {
+    showError("点数が未入力の項目があります。2名分入力するとトップが自動計算されます。");
+    return;
+  }
+
+  if (totalCheck !== 0) {
+    showError(`合計点数が0になりません (現在の合計: ${totalCheck})。点数を確認してください。`);
+    return;
+  }
 
   const dateVal = document.getElementById("currentDateInput").value || getTodayString();
-
-  // Find max Game_ID for the date
   const sameDateGames = gameResults.filter(g => g.Date === dateVal);
   const gameId = sameDateGames.length + 1;
 
@@ -238,27 +309,24 @@ function handleSaveGame() {
     "ゲスト": null
   };
 
-  let totalCheck = 0;
   selectedPlayers.forEach(p => {
-    const val = Number(document.getElementById(`score_input_${p}`).value);
-    newRecord[p] = val;
-    totalCheck += val;
+    newRecord[p] = Number(document.getElementById(`score_input_${p}`).value);
   });
-
-  if (totalCheck !== 0) {
-    showError("合計点数が0になりません。点数を確認してください。");
-    return;
-  }
 
   gameResults.push(newRecord);
   saveGameResults();
   showToast(`第${gameId}局のデータを保存しました`);
 
-  // Reset inputs
+  // リセット
   selectedPlayers.forEach(p => {
     const el = document.getElementById(`score_input_${p}`);
-    if (el) el.value = "";
+    if (el) {
+      el.value = "";
+      el.removeAttribute("data-auto-top");
+      el.style.color = "var(--text-main)";
+    }
   });
+  renderScoreInputRows();
 }
 
 function showError(text) {
