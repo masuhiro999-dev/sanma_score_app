@@ -159,40 +159,33 @@ function renderScoreInputRows() {
     container.appendChild(row);
   });
 
-  // 自動マイナス補正 & 入力時自動計算イベント
+  // 入力イベント（自動補正なし）
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
-    
-    inputEl.addEventListener("blur", () => {
-      const valStr = inputEl.value.trim();
-      if (valStr !== "" && !isNaN(valStr)) {
-        const num = Number(valStr);
-        // プラスの数値が入力された場合、自動でマイナスにする (例: 35 -> -35)
-        if (num > 0) {
-          inputEl.value = -num;
-        }
-      }
-      autoDetectAndCalculateTop();
-    });
-
-    inputEl.addEventListener("input", () => {
-      autoDetectAndCalculateTop();
-    });
+    if (inputEl) {
+      inputEl.addEventListener("input", () => {
+        hideError();
+      });
+    }
   });
 }
 
-// 2名の点数が入力されたら、未入力の最後の1名をトップとして自動計算
-function autoDetectAndCalculateTop() {
-  if (selectedPlayers.length !== 3) return false;
+// 「計算」ボタン押下時に実行される計算ロジック
+function calculateTopScore() {
+  if (selectedPlayers.length !== 3) {
+    showError("プレイヤーを3名選択してください");
+    return false;
+  }
 
   const filled = [];
   const empty = [];
 
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
-    const val = inputEl ? inputEl.value.trim() : "";
-    if (val !== "" && !isNaN(val)) {
-      filled.push({ player, val: Number(val) });
+    const valStr = inputEl ? inputEl.value.trim() : "";
+    
+    if (valStr !== "" && !isNaN(valStr)) {
+      filled.push({ player, val: Number(valStr) });
     } else {
       empty.push(player);
     }
@@ -206,26 +199,22 @@ function autoDetectAndCalculateTop() {
       badge.textContent = "入力欄";
       badge.className = "role-badge inputter";
     }
-    if (inputEl && inputEl.hasAttribute("data-auto-top")) {
-      inputEl.removeAttribute("data-auto-top");
+    if (inputEl) {
       inputEl.style.color = "var(--text-main)";
     }
   });
 
-  // ちょうど2名が入力済みで、1名が未入力の場合に自動計算
+  // パターン1: 2名入力、1名未入力 ➔ 未入力者をトップとして自動計算 ( 0 - (A + B) )
   if (filled.length === 2 && empty.length === 1) {
     const topPlayer = empty[0];
-    // 合計が0になるためのトップ点数: (Top) + A + B = 0  => Top = -(A + B)
-    // 例: -50 と -5 の場合 => -( (-50) + (-5) ) = -(-55) = 55
     const sumOthers = filled[0].val + filled[1].val;
-    const topScore = -sumOthers;
+    const topScore = 0 - sumOthers;
 
     const topInput = document.getElementById(`score_input_${topPlayer}`);
     const topBadge = document.getElementById(`badge_${topPlayer}`);
 
     if (topInput && topBadge) {
       topInput.value = topScore;
-      topInput.setAttribute("data-auto-top", "true");
       topInput.style.color = "var(--accent-gold)";
       topBadge.textContent = "トップ(自動)";
       topBadge.className = "role-badge top";
@@ -240,30 +229,23 @@ function autoDetectAndCalculateTop() {
     });
 
     hideError();
+    showToast(`トップ(${topPlayer})の点数を ${topScore > 0 ? '+' + topScore : topScore} と計算しました`);
     return true;
-  } else if (filled.length === 3) {
+  } 
+  // パターン2: 3名とも入力済み ➔ 合計0の検証
+  else if (filled.length === 3) {
     const total = filled.reduce((acc, curr) => acc + curr.val, 0);
     if (total === 0) {
       hideError();
+      showToast("合計0点を確認しました");
+      return true;
     } else {
-      showError(`現在の合計: ${total > 0 ? '+' + total : total} (合計が0になりません)`);
+      showError(`現在の合計が ${total > 0 ? '+' + total : total} になっています。合計が0になるよう修正してください。`);
+      return false;
     }
-  }
-
-  return false;
-}
-
-function calculateTopScore() {
-  const isCalculated = autoDetectAndCalculateTop();
-  if (!isCalculated) {
-    const filledCount = selectedPlayers.filter(p => {
-      const v = document.getElementById(`score_input_${p}`).value.trim();
-      return v !== "" && !isNaN(v);
-    }).length;
-
-    if (filledCount < 2) {
-      showError("2名の点数を入力してください。未入力の1名がトップとして自動計算されます。");
-    }
+  } else {
+    showError("点数を2名分入力した状態で「計算」ボタンを押してください。");
+    return false;
   }
 }
 
@@ -272,8 +254,6 @@ function handleSaveGame() {
     showError("プレイヤーを3名選択してください");
     return;
   }
-
-  autoDetectAndCalculateTop();
 
   let totalCheck = 0;
   let missingCount = 0;
@@ -288,7 +268,7 @@ function handleSaveGame() {
   });
 
   if (missingCount > 0) {
-    showError("点数が未入力の項目があります。2名分入力するとトップが自動計算されます。");
+    showError("点数が未入力の項目があります。2名分入力して「計算」ボタンを押してください。");
     return;
   }
 
@@ -324,12 +304,13 @@ function handleSaveGame() {
     const el = document.getElementById(`score_input_${p}`);
     if (el) {
       el.value = "";
-      el.removeAttribute("data-auto-top");
       el.style.color = "var(--text-main)";
     }
   });
   renderScoreInputRows();
 }
+
+
 
 function showError(text) {
   const errorMsg = document.getElementById("validationError");
@@ -646,6 +627,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initPastDataSection();
 
   // Buttons on Input Screen
+  document.getElementById("btnCalc").addEventListener("click", calculateTopScore);
   document.getElementById("btnSave").addEventListener("click", handleSaveGame);
 
   // Button on Database Screen
