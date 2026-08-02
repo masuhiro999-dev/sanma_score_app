@@ -213,22 +213,31 @@ function renderScoreInputRows() {
 }
 
 // 点数の数値パース（確実に数値化）
+// "+5"  ➔ +5 (プラス)
+// "-25" ➔ -25 (マイナス)
+// "25"  ➔ -25 (デフォルトマイナス)
 function parseScoreValue(valStr) {
   if (valStr === null || valStr === undefined) return null;
   const str = String(valStr).trim();
   if (str === "") return null;
 
-  // 明示的プラス "+30" -> 30
+  // 明示的なプラス "+5" ➔ 必ず正の数
   if (str.startsWith("+")) {
-    const num = Number(str.substring(1).trim());
+    const rawNum = str.substring(1).trim();
+    const num = Number(rawNum);
     return isNaN(num) ? null : Math.abs(num);
   }
 
+  // 明示的なマイナス "-25" ➔ 必ず負の数
+  if (str.startsWith("-")) {
+    const rawNum = str.substring(1).trim();
+    const num = Number(rawNum);
+    return isNaN(num) ? null : -Math.abs(num);
+  }
+
+  // 符号なし "25" ➔ デフォルトで負の数
   const num = Number(str);
   if (isNaN(num)) return null;
-  
-  // 明示的マイナス "-20" -> -20, 単なる数字 "20" -> -20
-  if (str.startsWith("-")) return num;
   return num === 0 ? 0 : -Math.abs(num);
 }
 
