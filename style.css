@@ -1,0 +1,529 @@
+/* ==========================================
+   Design System & Global Variables
+   ========================================== */
+:root {
+  --bg-dark: #0f172a;
+  --bg-card: #1e293b;
+  --bg-input: #334155;
+  --border-color: #475569;
+  
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --accent-gold: #f59e0b;
+  
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Highlights */
+  --highlight-top-bg: #1e3a8a;      /* 水色・深めのブルーハイライト */
+  --highlight-top-text: #60a5fa;
+  --highlight-tobi-bg: #831843;     /* ピンク・深めのローズハイライト */
+  --highlight-tobi-text: #f472b6;
+
+  --badge-top: #0284c7;
+  --badge-tobi: #e11d48;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 70px; /* Space for bottom nav */
+}
+
+/* ==========================================
+   Header & Navigation
+   ========================================== */
+header {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+
+.date-selector-wrapper input[type="date"] {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+/* Bottom Navigation (Mobile First) */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
+  text-decoration: none;
+  font-size: 0.75rem;
+  gap: 3px;
+  background: none;
+  border: none;
+  width: 33.33%;
+  height: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-item .icon {
+  font-size: 1.25rem;
+}
+
+.nav-item.active {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* ==========================================
+   Main Content Layout
+   ========================================== */
+main {
+  flex: 1;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================
+   Card System
+   ========================================== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-main);
+}
+
+/* ==========================================
+   1. Input Screen Styles
+   ========================================== */
+.player-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.player-checkbox-card {
+  background: var(--bg-input);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.player-checkbox-card.selected {
+  border-color: var(--primary-color);
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.player-checkbox-card input {
+  display: none;
+}
+
+.score-inputs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 60px;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-input);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.score-row label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.score-row input[type="number"] {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  font-size: 1.1rem;
+  width: 100%;
+  text-align: right;
+}
+
+.score-row input[readonly] {
+  background: #1e293b;
+  color: var(--accent-gold);
+  font-weight: bold;
+}
+
+.role-badge {
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 600;
+}
+.role-badge.top { background: var(--badge-top); color: #fff; }
+.role-badge.inputter { background: #475569; color: #fff; }
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary { background: var(--primary-color); color: white; }
+.btn-primary:hover { background: var(--primary-hover); }
+
+.btn-calc { background: var(--accent-gold); color: #000; }
+.btn-calc:hover { background: #d97706; color: white; }
+
+.btn-secondary { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); }
+.btn-secondary:hover { background: var(--border-color); }
+
+/* Validation Error Message */
+.error-msg {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  display: none;
+}
+
+/* ==========================================
+   2. Dashboard Screen Styles
+   ========================================== */
+.player-stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--primary-color);
+}
+
+.stat-card .player-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.stat-card .day-score {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.stat-card .day-money {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-bottom: 8px;
+}
+
+.stat-card .total-money {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  background: var(--bg-input);
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.stat-card .badge-counts {
+  display: flex;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.count-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.count-badge.top-count { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+.count-badge.tobi-count { background: rgba(244, 114, 182, 0.2); color: #f472b6; border: 1px solid rgba(244, 114, 182, 0.4); }
+
+/* Tables */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+th, td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+th {
+  background: #1e293b;
+  color: var(--text-sub);
+  font-weight: 600;
+}
+
+td {
+  background: var(--bg-card);
+}
+
+/* Conditional Formatting Rules */
+td.cell-top {
+  background-color: var(--highlight-top-bg) !important;
+  color: var(--highlight-top-text) !important;
+  font-weight: bold;
+}
+
+td.cell-tobi {
+  background-color: var(--highlight-tobi-bg) !important;
+  color: var(--highlight-tobi-text) !important;
+  font-weight: bold;
+}
+
+td.cell-empty {
+  color: var(--text-muted);
+}
+
+/* ==========================================
+   3. Database & Past Data Styles
+   ========================================== */
+.editable-cell {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.editable-cell:hover {
+  background: var(--bg-input);
+  outline: 1px dashed var(--primary-color);
+}
+
+.editable-cell input {
+  width: 60px;
+  background: var(--bg-dark);
+  color: var(--text-main);
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 2px;
+}
+
+/* Accordion for Past Data */
+.accordion {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.accordion-header {
+  background: var(--bg-card);
+  padding: 12px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.accordion-content {
+  display: none;
+  padding: 16px;
+  background: var(--bg-input);
+  border-top: 1px solid var(--border-color);
+}
+
+.accordion-content.open {
+  display: block;
+}
+
+.past-data-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.past-data-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.past-data-field label {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+}
+
+.past-data-field input {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 6px;
+  border-radius: 4px;
+  text-align: right;
+}
+
+/* Toast Notifications */
+#toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: var(--primary-color);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 1000;
+}
+
+#toast.show {
+  transform: translateX(-50%) translateY(0);
+}

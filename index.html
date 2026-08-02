@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>三人打ち麻雀点数管理アプリ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <h1>🀄 三人打ち麻雀点数管理</h1>
+    <div class="date-selector-wrapper">
+      <label for="currentDateInput">日付:</label>
+      <input type="date" id="currentDateInput">
+    </div>
+  </header>
+
+  <!-- Main Body -->
+  <main>
+    
+    <!-- Toast Notification -->
+    <div id="toast">保存しました</div>
+
+    <!-- 1. 入力画面 -->
+    <section id="tab-input" class="tab-content active">
+      <div class="card">
+        <div class="card-title">
+          <span>対局参加者を選択 (3名)</span>
+        </div>
+        <div class="player-select-grid" id="playerSelectGrid">
+          <!-- JSで動的に表示 -->
+        </div>
+      </div>
+
+      <div class="card" id="scoreInputCard" style="display: none;">
+        <div class="card-title">
+          <span>局ごとの点数入力</span>
+          <span style="font-size: 0.8rem; color: var(--text-sub);">※トップ以外を入力</span>
+        </div>
+        
+        <!-- トップの指定 -->
+        <div style="margin-bottom: 12px; font-size: 0.9rem; color: var(--text-sub);">
+          <label for="topPlayerSelect">トップ（自動計算対象）:</label>
+          <select id="topPlayerSelect" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 4px; font-weight: bold; margin-left: 6px;">
+          </select>
+        </div>
+
+        <div class="score-inputs-container" id="scoreInputsContainer">
+          <!-- JSで選択プレイヤーに応じて生成 -->
+        </div>
+
+        <div id="validationError" class="error-msg"></div>
+
+        <div class="btn-group" style="margin-top: 16px;">
+          <button type="button" class="btn btn-calc" id="btnCalc">⚡ 自動計算</button>
+          <button type="button" class="btn btn-primary" id="btnSave">💾 保存</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. ダッシュボード画面 -->
+    <section id="tab-dashboard" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>本日の成績サマリー</span>
+          <span id="dashboardDateBadge" style="font-size: 0.8rem; color: var(--accent-gold);"></span>
+        </div>
+        <div class="player-stat-cards" id="playerStatCards">
+          <!-- JSでプレイヤー5名分のスタッツカードを生成 -->
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>本日の対局結果一覧 (Game_Results)</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="dashboardTable">
+            <thead>
+              <tr>
+                <th>局</th>
+                <th>渡邊</th>
+                <th>増田</th>
+                <th>神山</th>
+                <th>坂田</th>
+                <th>ゲスト</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- JSで生成 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. データベース画面 -->
+    <section id="tab-database" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>対局データ管理 (Game_Results)</span>
+          <button type="button" class="btn btn-secondary" id="btnExportCsv" style="font-size: 0.8rem; padding: 6px 12px;">
+            📥 CSVエクスポート
+          </button>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 8px;">
+          ※点数セルを直接クリック（タップ）して値を手修正できます。
+        </div>
+        <div class="table-wrapper">
+          <table id="databaseTable">
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>局</th>
+                <th>渡邊</th>
+                <th>増田</th>
+                <th>神山</th>
+                <th>坂田</th>
+                <th>ゲスト</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- JSで生成 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Past_Data アコーディオン -->
+      <div class="accordion">
+        <div class="accordion-header" id="pastDataAccordionHeader">
+          <span>⚙️ 過去の累計データ移行 (Past_Data)</span>
+          <span id="accordionIcon">▼</span>
+        </div>
+        <div class="accordion-content" id="pastDataAccordionContent">
+          <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;">
+            アプリ利用前の初期累計点数を登録・編集できます。（ダッシュボードの累計金額に反映されます）
+          </p>
+          <div class="past-data-form" id="pastDataForm">
+            <!-- JSで各プレイヤーの初期点数入力欄を生成 -->
+          </div>
+          <button type="button" class="btn btn-primary" id="btnSavePastData" style="margin-top: 8px;">
+            初期累計データを保存
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="tab-input">
+      <span class="icon">✏️</span>
+      <span>入力</span>
+    </button>
+    <button class="nav-item" data-tab="tab-dashboard">
+      <span class="icon">📊</span>
+      <span>ダッシュボード</span>
+    </button>
+    <button class="nav-item" data-tab="tab-database">
+      <span class="icon">🗄️</span>
+      <span>データベース</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
