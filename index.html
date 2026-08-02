@@ -37,14 +37,7 @@
       <div class="card" id="scoreInputCard" style="display: none;">
         <div class="card-title">
           <span>局ごとの点数入力</span>
-          <span style="font-size: 0.8rem; color: var(--text-sub);">※トップ以外を入力</span>
-        </div>
-        
-        <!-- トップの指定 -->
-        <div style="margin-bottom: 12px; font-size: 0.9rem; color: var(--text-sub);">
-          <label for="topPlayerSelect">トップ（自動計算対象）:</label>
-          <select id="topPlayerSelect" style="background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 4px; font-weight: bold; margin-left: 6px;">
-          </select>
+          <span style="font-size: 0.8rem; color: var(--text-sub);">※2名の点数を入力するとトップが自動計算されます</span>
         </div>
 
         <div class="score-inputs-container" id="scoreInputsContainer">
@@ -54,7 +47,6 @@
         <div id="validationError" class="error-msg"></div>
 
         <div class="btn-group" style="margin-top: 16px;">
-          <button type="button" class="btn btn-calc" id="btnCalc">⚡ 自動計算</button>
           <button type="button" class="btn btn-primary" id="btnSave">💾 保存</button>
         </div>
       </div>
