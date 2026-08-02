@@ -152,21 +152,60 @@ function renderScoreInputRows() {
 
     row.innerHTML = `
       <label>${player}</label>
-      <input type="text" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="例: 35 (→-35), +10 (→10)" inputmode="decimal">
+      <div class="score-input-wrap">
+        <button type="button" class="btn-sign-toggle" data-player="${player}" title="プラス/マイナス切り替え">-</button>
+        <input type="text" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="数字を入力" inputmode="decimal">
+      </div>
       <span class="role-badge inputter" id="badge_${player}">入力欄</span>
     `;
 
     container.appendChild(row);
   });
 
-  // フォーカスが外れた時（確定時）に表記を整える
+  // ＋/ー 切り替えボタンのイベントリスナー
   selectedPlayers.forEach(player => {
+    const toggleBtn = container.querySelector(`.btn-sign-toggle[data-player="${player}"]`);
     const inputEl = document.getElementById(`score_input_${player}`);
-    if (inputEl) {
-      inputEl.addEventListener("blur", () => {
-        const parsed = parseScoreInput(inputEl.value);
-        if (parsed !== null) {
-          inputEl.value = parsed;
+
+    if (toggleBtn && inputEl) {
+      toggleBtn.addEventListener("click", () => {
+        let val = inputEl.value.trim();
+        if (val.startsWith("+")) {
+          // プラスからマイナスへ
+          inputEl.value = val.substring(1);
+          toggleBtn.textContent = "-";
+          toggleBtn.classList.remove("plus");
+        } else if (val.startsWith("-")) {
+          // マイナスからプラスへ
+          inputEl.value = "+" + val.substring(1);
+          toggleBtn.textContent = "+";
+          toggleBtn.classList.add("plus");
+        } else if (val !== "") {
+          // 数字のみ（デフォルトマイナス）からプラスへ
+          inputEl.value = "+" + val;
+          toggleBtn.textContent = "+";
+          toggleBtn.classList.add("plus");
+        } else {
+          // 空の場合、トグルの表示だけ切り替え
+          if (toggleBtn.textContent === "-") {
+            toggleBtn.textContent = "+";
+            toggleBtn.classList.add("plus");
+          } else {
+            toggleBtn.textContent = "-";
+            toggleBtn.classList.remove("plus");
+          }
+        }
+      });
+
+      // 入力時に符号を検出してボタン表記を自動連動
+      inputEl.addEventListener("input", () => {
+        const val = inputEl.value.trim();
+        if (val.startsWith("+")) {
+          toggleBtn.textContent = "+";
+          toggleBtn.classList.add("plus");
+        } else {
+          toggleBtn.textContent = "-";
+          toggleBtn.classList.remove("plus");
         }
       });
     }
