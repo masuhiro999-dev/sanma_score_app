@@ -215,8 +215,10 @@ function autoDetectAndCalculateTop() {
   // ちょうど2名が入力済みで、1名が未入力の場合に自動計算
   if (filled.length === 2 && empty.length === 1) {
     const topPlayer = empty[0];
+    // 合計が0になるためのトップ点数: (Top) + A + B = 0  => Top = -(A + B)
+    // 例: -50 と -5 の場合 => -( (-50) + (-5) ) = -(-55) = 55
     const sumOthers = filled[0].val + filled[1].val;
-    const topScore = 0 - sumOthers;
+    const topScore = -sumOthers;
 
     const topInput = document.getElementById(`score_input_${topPlayer}`);
     const topBadge = document.getElementById(`badge_${topPlayer}`);
@@ -644,7 +646,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initPastDataSection();
 
   // Buttons on Input Screen
-  document.getElementById("btnCalc").addEventListener("click", calculateTopScore);
   document.getElementById("btnSave").addEventListener("click", handleSaveGame);
 
   // Button on Database Screen
