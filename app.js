@@ -173,33 +173,27 @@ function renderScoreInputRows() {
   });
 }
 
-// 点数の文字列解析ヘルパー
-// 数字のみ "30" ➔ -30 (デフォルトマイナス)
-// "+30" ➔ 30 (プラス)
-// "-30" ➔ -30 (マイナス)
-function parseScoreInput(valStr) {
-  if (!valStr) return null;
-  const trimmed = valStr.trim();
-  if (trimmed === "") return null;
+// 点数の数値パース（確実に数値化）
+function parseScoreValue(valStr) {
+  if (valStr === null || valStr === undefined) return null;
+  const str = String(valStr).trim();
+  if (str === "") return null;
 
-  // 明示的なプラス表記 (+30 や + 30)
-  if (trimmed.startsWith("+")) {
-    const num = Number(trimmed.substring(1).trim());
+  // 明示的プラス "+30" -> 30
+  if (str.startsWith("+")) {
+    const num = Number(str.substring(1).trim());
     return isNaN(num) ? null : Math.abs(num);
   }
 
-  // 明示的なマイナス表記 (-30) または 数字のみ (30)
-  const num = Number(trimmed);
+  const num = Number(str);
   if (isNaN(num)) return null;
-
-  // 0の場合は 0
-  if (num === 0) return 0;
-
-  // 数字のみ(正の数)ならデフォルトでマイナス化、マイナス表記ならそのまま
-  return num > 0 ? -num : num;
+  
+  // 明示的マイナス "-20" -> -20, 単なる数字 "20" -> -20
+  if (str.startsWith("-")) return num;
+  return num === 0 ? 0 : -Math.abs(num);
 }
 
-// 「計算」ボタン押下時に実行される計算ロジック
+// 「計算」ボタン押下時
 function calculateTopScore() {
   if (selectedPlayers.length !== 3) {
     showError("プレイヤーを3名選択してください");
@@ -211,11 +205,10 @@ function calculateTopScore() {
 
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
-    const rawVal = inputEl ? inputEl.value.trim() : "";
-    const parsedVal = parseScoreInput(rawVal);
+    const rawVal = inputEl ? inputEl.value : "";
+    const parsedVal = parseScoreValue(rawVal);
     
     if (parsedVal !== null) {
-      // 入力表記も整形済みに統一
       inputEl.value = parsedVal;
       filled.push({ player, val: parsedVal });
     } else {
@@ -223,20 +216,7 @@ function calculateTopScore() {
     }
   });
 
-  // リセット表示
-  selectedPlayers.forEach(player => {
-    const badge = document.getElementById(`badge_${player}`);
-    const inputEl = document.getElementById(`score_input_${player}`);
-    if (badge) {
-      badge.textContent = "入力欄";
-      badge.className = "role-badge inputter";
-    }
-    if (inputEl) {
-      inputEl.style.color = "var(--text-main)";
-    }
-  });
-
-  // パターン1: 2名入力、1名未入力 ➔ 未入力者をトップとして自動計算 ( 0 - (A + B) )
+  // 2名入力、1名未入力 ➔ 未入力者をトップとして自動計算 ( Top = 0 - (A + B) )
   if (filled.length === 2 && empty.length === 1) {
     const topPlayer = empty[0];
     const sumOthers = filled[0].val + filled[1].val;
@@ -246,9 +226,9 @@ function calculateTopScore() {
     const topBadge = document.getElementById(`badge_${topPlayer}`);
 
     if (topInput && topBadge) {
-      topInput.value = topScore;
+      topInput.value = topScore; // 単純な数値 (例: 35) をセット
       topInput.style.color = "var(--accent-gold)";
-      topBadge.textContent = "トップ(自動)";
+      topBadge.innerHTML = "👑 トップ";
       topBadge.className = "role-badge top";
     }
 
@@ -264,7 +244,7 @@ function calculateTopScore() {
     showToast(`トップ(${topPlayer})の点数を ${topScore > 0 ? '+' + topScore : topScore} と計算しました`);
     return true;
   } 
-  // パターン2: 3名とも入力済み ➔ 合計0の検証
+  // 3名入力済み ➔ 検証
   else if (filled.length === 3) {
     const total = filled.reduce((acc, curr) => acc + curr.val, 0);
     if (total === 0) {
@@ -281,6 +261,7 @@ function calculateTopScore() {
   }
 }
 
+// 「保存」ボタン押下時
 function handleSaveGame() {
   if (selectedPlayers.length !== 3) {
     showError("プレイヤーを3名選択してください");
@@ -289,14 +270,18 @@ function handleSaveGame() {
 
   let totalCheck = 0;
   let missingCount = 0;
+  const currentScores = {};
 
   selectedPlayers.forEach(p => {
-    const rawVal = document.getElementById(`score_input_${p}`).value;
-    const parsed = parseScoreInput(rawVal);
-    if (parsed === null) {
+    const inputEl = document.getElementById(`score_input_${p}`);
+    const rawVal = inputEl ? inputEl.value.trim() : "";
+    
+    if (rawVal === "" || isNaN(rawVal)) {
       missingCount++;
     } else {
-      totalCheck += parsed;
+      const num = Number(rawVal);
+      currentScores[p] = num;
+      totalCheck += num;
     }
   });
 
@@ -305,7 +290,8 @@ function handleSaveGame() {
     return;
   }
 
-  if (totalCheck !== 0) {
+  // 純粋な数値の単純足し算で0かどうかを検証！
+  if (Math.round(totalCheck * 100) !== 0) {
     showError(`合計点数が0になりません (現在の合計: ${totalCheck > 0 ? '+' + totalCheck : totalCheck})。点数を確認してください。`);
     return;
   }
@@ -325,15 +311,14 @@ function handleSaveGame() {
   };
 
   selectedPlayers.forEach(p => {
-    const parsed = parseScoreInput(document.getElementById(`score_input_${p}`).value);
-    newRecord[p] = parsed;
+    newRecord[p] = currentScores[p];
   });
 
   gameResults.push(newRecord);
   saveGameResults();
   showToast(`第${gameId}局のデータを保存しました`);
 
-  // リセット
+  // 入力欄をクリア
   selectedPlayers.forEach(p => {
     const el = document.getElementById(`score_input_${p}`);
     if (el) {
@@ -342,6 +327,21 @@ function handleSaveGame() {
     }
   });
   renderScoreInputRows();
+}
+
+function showError(text) {
+  const errorMsg = document.getElementById("validationError");
+  if (errorMsg) {
+    errorMsg.textContent = text;
+    errorMsg.style.display = "block";
+  }
+}
+
+function hideError() {
+  const errorMsg = document.getElementById("validationError");
+  if (errorMsg) {
+    errorMsg.style.display = "none";
+  }
 }
 
 
@@ -371,22 +371,26 @@ function renderDashboard() {
   PLAYERS.forEach(p => {
     stats[p] = {
       dayScore: 0,
-      topCount: 0,
-      tobiCount: 0,
+      topCount: 0,       // 当日のみのトップ回数
+      tobiCount: 0,      // 当日のみの飛び回数
       totalScoreAllTime: pastData[p] || 0
     };
   });
 
-  // Calculate day stats & total score all time
+  // Calculate day stats (day-only for top/tobi) & all-time total score
   gameResults.forEach(g => {
+    const isToday = (g.Date === currentDate);
+
+    // 1. 各プレイヤーのスコア加算 ＆ 飛び回数判定
     PLAYERS.forEach(p => {
       const val = g[p];
       if (val !== null && val !== undefined && val !== "") {
         const num = Number(val);
         stats[p].totalScoreAllTime += num;
 
-        if (g.Date === currentDate) {
+        if (isToday) {
           stats[p].dayScore += num;
+          // 当日のみの飛び回数 ( -31 点以下 )
           if (num <= -31) {
             stats[p].tobiCount += 1;
           }
@@ -394,8 +398,8 @@ function renderDashboard() {
       }
     });
 
-    // Determine top for this game (among participating 3 players)
-    if (g.Date === currentDate) {
+    // 2. 当日の対局のみでトップ回数を集計
+    if (isToday) {
       let maxScore = -Infinity;
       let topP = null;
       PLAYERS.forEach(p => {
@@ -406,13 +410,14 @@ function renderDashboard() {
           }
         }
       });
-      if (topP) {
+      if (topP && maxScore !== -Infinity) {
         stats[topP].topCount += 1;
       }
     }
   });
 
   // Render Stat Cards
+  // 順序: プレイヤー名 -> 当日の金額(大) -> 当日の点数(標準) -> 過去累計金額 -> トップ/飛び
   const cardsContainer = document.getElementById("playerStatCards");
   cardsContainer.innerHTML = "";
 
@@ -421,15 +426,21 @@ function renderDashboard() {
     const dayMoney = dayScore * 100;
     const totalMoney = stats[p].totalScoreAllTime * 100;
 
+    // カラー判定 (プラス: 青, マイナス: ローズ, 0: 見やすいライトシルバーグレー)
+    const moneyColor = dayMoney > 0 ? '#60a5fa' : dayMoney < 0 ? '#f472b6' : '#cbd5e1';
+    const scoreColor = dayScore > 0 ? '#60a5fa' : dayScore < 0 ? '#f472b6' : '#cbd5e1';
+
     const card = document.createElement("div");
     card.className = "stat-card";
     card.innerHTML = `
       <div class="player-name">${p}</div>
-      <div class="day-score" style="color: ${dayScore > 0 ? '#60a5fa' : dayScore < 0 ? '#f472b6' : 'var(--text-main)'}">
-        ${dayScore > 0 ? '+' : ''}${dayScore}
+      <div class="day-money-large" style="color: ${moneyColor}">
+        ${dayMoney > 0 ? '+' : ''}${dayMoney.toLocaleString()}円
       </div>
-      <div class="day-money">${dayMoney > 0 ? '+' : ''}${dayMoney.toLocaleString()}円</div>
-      <div class="total-money">通算: ${totalMoney > 0 ? '+' : ''}${totalMoney.toLocaleString()}円</div>
+      <div class="day-score-sub" style="color: ${scoreColor}">
+        ${dayScore > 0 ? '+' : ''}${dayScore}点
+      </div>
+      <div class="total-money">累計: ${totalMoney > 0 ? '+' : ''}${totalMoney.toLocaleString()}円</div>
       <div class="badge-counts">
         <span class="count-badge top-count">Top: ${stats[p].topCount}</span>
         <span class="count-badge tobi-count">飛: ${stats[p].tobiCount}</span>
@@ -438,7 +449,7 @@ function renderDashboard() {
     cardsContainer.appendChild(card);
   });
 
-  // Render Day Results Table
+  // Render Day Results Table (第1局から上に積み上がる降順：最新局が最上部)
   const tbody = document.querySelector("#dashboardTable tbody");
   tbody.innerHTML = "";
 
@@ -447,7 +458,10 @@ function renderDashboard() {
     return;
   }
 
-  dayGames.forEach(g => {
+  // Game_ID降順ソート
+  const sortedDayGames = [...dayGames].sort((a, b) => b.Game_ID - a.Game_ID);
+
+  sortedDayGames.forEach(g => {
     const tr = document.createElement("tr");
 
     // Find highest score in this game

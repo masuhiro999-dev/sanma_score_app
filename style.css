@@ -220,47 +220,72 @@ main {
   margin-bottom: 16px;
 }
 
+/* グレーを基調とした落ち着いたカード行 */
 .score-row {
   display: grid;
-  grid-template-columns: 100px 1fr 60px;
+  grid-template-columns: 85px 1fr 95px;
   align-items: center;
-  gap: 8px;
-  background: var(--bg-input);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
+  gap: 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
 }
 
 .score-row label {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
+  color: var(--text-main);
 }
 
-.score-row input[type="number"] {
-  background: var(--bg-dark);
-  border: 1px solid var(--border-color);
+/* スタイリッシュなグレーの入力枠 */
+.score-row input.player-score-input {
+  background: #0f172a;
+  border: 1.5px solid #475569;
   color: var(--text-main);
-  padding: 10px;
+  padding: 10px 12px;
   border-radius: var(--radius-sm);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
   width: 100%;
   text-align: right;
+  transition: border-color 0.2s ease;
 }
 
-.score-row input[readonly] {
-  background: #1e293b;
-  color: var(--accent-gold);
-  font-weight: bold;
+.score-row input.player-score-input:focus {
+  outline: none;
+  border-color: #94a3b8;
+  background: #090d16;
 }
 
+/* 角丸四角のロールバッジ */
 .role-badge {
   font-size: 0.75rem;
-  padding: 4px 6px;
-  border-radius: 4px;
+  padding: 6px 8px;
+  border-radius: 6px; /* 角丸の四角 */
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
-.role-badge.top { background: var(--badge-top); color: #fff; }
-.role-badge.inputter { background: #475569; color: #fff; }
+
+/* 👑 トップ：高級感のあるダークゴールド背景＋黄金王冠＋くっきり白文字 */
+.role-badge.top { 
+  background: #78350f; 
+  color: #fef08a; 
+  border: 1px solid #d97706;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* 入力者：スタイリッシュな角丸四角グレーバッジ */
+.role-badge.inputter { 
+  background: #334155; 
+  color: #cbd5e1; 
+  border: 1px solid #475569;
+}
 
 .btn-group {
   display: flex;
@@ -342,23 +367,25 @@ main {
   margin-bottom: 6px;
 }
 
-.stat-card .day-score {
+/* 当日の金額（特大表示） */
+.stat-card .day-money-large {
   font-size: 1.4rem;
   font-weight: 800;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
-.stat-card .day-money {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--accent-gold);
+/* 当日の点数（標準表示） */
+.stat-card .day-score-sub {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-sub);
   margin-bottom: 8px;
 }
 
 .stat-card .total-money {
   font-size: 0.75rem;
-  color: var(--text-sub);
-  background: var(--bg-input);
+  color: var(--text-muted);
+  background: var(--bg-dark);
   padding: 3px 8px;
   border-radius: 12px;
   margin-bottom: 8px;
