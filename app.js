@@ -1,12 +1,23 @@
 // ==========================================
-// Application State & Data Management
+// Application State & Data Management (Firebase Cloud Synchronized)
 // ==========================================
 
 const PLAYERS = ["渡邊", "増田", "神山", "坂田", "ゲスト"];
 const STORAGE_KEY_GAMES = "sanma_game_results_v1";
 const STORAGE_KEY_PAST = "sanma_past_data_v1";
 
-// Default initial data if not preset
+// Firebase Configuration (Google Firebaseで取得した設定情報をここに貼り付けます)
+const firebaseConfig = {
+  databaseURL: "https://sanma-score-app-c7e1f-default-rtdb.firebaseio.com"//
+
+  // apiKey: "...",
+  // databaseURL: "...",
+};
+
+let dbRefGames = null;
+let dbRefPast = null;
+let isCloudActive = false;
+
 let pastData = {
   "渡邊": 0,
   "増田": 0,
@@ -17,30 +28,75 @@ let pastData = {
 
 let gameResults = [];
 
-// Initialize LocalStorage Data
+// Initialize Data & Cloud Realtime Listener
 function initData() {
+  // Local fallback initial
   const storedPast = localStorage.getItem(STORAGE_KEY_PAST);
-  if (storedPast) {
-    pastData = JSON.parse(storedPast);
-  } else {
-    localStorage.setItem(STORAGE_KEY_PAST, JSON.stringify(pastData));
-  }
+  if (storedPast) pastData = JSON.parse(storedPast);
 
   const storedGames = localStorage.getItem(STORAGE_KEY_GAMES);
-  if (storedGames) {
-    gameResults = JSON.parse(storedGames);
-  } else {
-    gameResults = [];
-    localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(gameResults));
+  if (storedGames) gameResults = JSON.parse(storedGames);
+
+  // Initialize Firebase if config exists
+  if (typeof firebase !== "undefined" && firebaseConfig.databaseURL) {
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      const db = firebase.database();
+      dbRefGames = db.ref("gameResults");
+      dbRefPast = db.ref("pastData");
+      isCloudActive = true;
+
+      // リアルタイムリスナー (対局データ更新時)
+      dbRefGames.on("value", (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          gameResults = Array.isArray(val) ? val : Object.values(val);
+        } else {
+          gameResults = [];
+        }
+        localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(gameResults));
+        refreshAllScreens();
+      });
+
+      // リアルタイムリスナー (過去累計点数更新時)
+      dbRefPast.on("value", (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          pastData = val;
+          localStorage.setItem(STORAGE_KEY_PAST, JSON.stringify(pastData));
+          refreshAllScreens();
+        }
+      });
+
+      console.log("Firebase Realtime Database Connected!");
+    } catch (e) {
+      console.warn("Firebase initialization skipped or failed:", e);
+    }
+  }
+}
+
+function refreshAllScreens() {
+  const activeTab = document.querySelector(".tab-content.active");
+  if (activeTab) {
+    if (activeTab.id === "tab-dashboard") renderDashboard();
+    if (activeTab.id === "tab-database") renderDatabase();
   }
 }
 
 function saveGameResults() {
   localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(gameResults));
+  if (isCloudActive && dbRefGames) {
+    dbRefGames.set(gameResults);
+  }
 }
 
 function savePastDataState() {
   localStorage.setItem(STORAGE_KEY_PAST, JSON.stringify(pastData));
+  if (isCloudActive && dbRefPast) {
+    dbRefPast.set(pastData);
+  }
 }
 
 // Helper: Toast notification
