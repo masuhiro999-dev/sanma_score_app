@@ -152,22 +152,51 @@ function renderScoreInputRows() {
 
     row.innerHTML = `
       <label>${player}</label>
-      <input type="number" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="例: -30 (正の数で自動-)" step="any">
+      <input type="text" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="例: 35 (→-35), +10 (→10)" inputmode="decimal">
       <span class="role-badge inputter" id="badge_${player}">入力欄</span>
     `;
 
     container.appendChild(row);
   });
 
-  // 入力イベント（自動補正なし）
+  // フォーカスが外れた時（確定時）に表記を整える
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
     if (inputEl) {
-      inputEl.addEventListener("input", () => {
-        hideError();
+      inputEl.addEventListener("blur", () => {
+        const parsed = parseScoreInput(inputEl.value);
+        if (parsed !== null) {
+          inputEl.value = parsed;
+        }
       });
     }
   });
+}
+
+// 点数の文字列解析ヘルパー
+// 数字のみ "30" ➔ -30 (デフォルトマイナス)
+// "+30" ➔ 30 (プラス)
+// "-30" ➔ -30 (マイナス)
+function parseScoreInput(valStr) {
+  if (!valStr) return null;
+  const trimmed = valStr.trim();
+  if (trimmed === "") return null;
+
+  // 明示的なプラス表記 (+30 や + 30)
+  if (trimmed.startsWith("+")) {
+    const num = Number(trimmed.substring(1).trim());
+    return isNaN(num) ? null : Math.abs(num);
+  }
+
+  // 明示的なマイナス表記 (-30) または 数字のみ (30)
+  const num = Number(trimmed);
+  if (isNaN(num)) return null;
+
+  // 0の場合は 0
+  if (num === 0) return 0;
+
+  // 数字のみ(正の数)ならデフォルトでマイナス化、マイナス表記ならそのまま
+  return num > 0 ? -num : num;
 }
 
 // 「計算」ボタン押下時に実行される計算ロジック
@@ -182,10 +211,13 @@ function calculateTopScore() {
 
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
-    const valStr = inputEl ? inputEl.value.trim() : "";
+    const rawVal = inputEl ? inputEl.value.trim() : "";
+    const parsedVal = parseScoreInput(rawVal);
     
-    if (valStr !== "" && !isNaN(valStr)) {
-      filled.push({ player, val: Number(valStr) });
+    if (parsedVal !== null) {
+      // 入力表記も整形済みに統一
+      inputEl.value = parsedVal;
+      filled.push({ player, val: parsedVal });
     } else {
       empty.push(player);
     }
@@ -259,11 +291,12 @@ function handleSaveGame() {
   let missingCount = 0;
 
   selectedPlayers.forEach(p => {
-    const valStr = document.getElementById(`score_input_${p}`).value.trim();
-    if (valStr === "" || isNaN(valStr)) {
+    const rawVal = document.getElementById(`score_input_${p}`).value;
+    const parsed = parseScoreInput(rawVal);
+    if (parsed === null) {
       missingCount++;
     } else {
-      totalCheck += Number(valStr);
+      totalCheck += parsed;
     }
   });
 
@@ -273,7 +306,7 @@ function handleSaveGame() {
   }
 
   if (totalCheck !== 0) {
-    showError(`合計点数が0になりません (現在の合計: ${totalCheck})。点数を確認してください。`);
+    showError(`合計点数が0になりません (現在の合計: ${totalCheck > 0 ? '+' + totalCheck : totalCheck})。点数を確認してください。`);
     return;
   }
 
@@ -292,7 +325,8 @@ function handleSaveGame() {
   };
 
   selectedPlayers.forEach(p => {
-    newRecord[p] = Number(document.getElementById(`score_input_${p}`).value);
+    const parsed = parseScoreInput(document.getElementById(`score_input_${p}`).value);
+    newRecord[p] = parsed;
   });
 
   gameResults.push(newRecord);
