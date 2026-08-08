@@ -482,18 +482,18 @@ function calculateTopScore() {
   const filled = [];
   const empty = [];
 
+  // シンプルかつ確実に手動入力済み2名と未入力1名を判定
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
     const actionCell = document.getElementById(`action_cell_${player}`);
     const rawVal = inputEl ? inputEl.value.trim() : "";
 
-    // 既に「👑 トップ」バッジが付いている、または手動入力されていない項目は未入力(empty)扱いにする
-    const isAlreadyTop = actionCell && actionCell.querySelector(".role-badge.top");
+    // 既に「👑 トップ」バッジが付いている、または数値が入っていない場合は未入力扱い
+    const isAlreadyTopBadge = actionCell && actionCell.querySelector(".role-badge.top");
 
-    if (rawVal !== "" && !isAlreadyTop) {
+    if (rawVal !== "" && !isAlreadyTopBadge) {
       const parsedVal = parseScoreValue(rawVal);
       if (parsedVal !== null) {
-        inputEl.value = parsedVal > 0 ? `+${parsedVal}` : `${parsedVal}`;
         filled.push({ player, val: parsedVal });
       } else {
         empty.push(player);
@@ -503,7 +503,7 @@ function calculateTopScore() {
     }
   });
 
-  // 1. パターン1: 2名の手動入力があり、1名が未入力（または前回トップ） ➔ 正確にトップを自動計算 ( Top = 0 - (A + B) )
+  // 1. パターン1: 2名分が入力（確定）済み、1名が未入力 ➔ トップを自動計算 ( Top = 0 - (A + B) )
   if (filled.length === 2 && empty.length === 1) {
     const topPlayer = empty[0];
     const sumOthers = filled[0].val + filled[1].val;
@@ -512,22 +512,24 @@ function calculateTopScore() {
     const topInput = document.getElementById(`score_input_${topPlayer}`);
     const topActionCell = document.getElementById(`action_cell_${topPlayer}`);
 
-    if (topInput && topActionCell) {
+    if (topInput) {
       topInput.value = topScore > 0 ? `+${topScore}` : `${topScore}`;
       topInput.style.color = "var(--accent-gold)";
+    }
+
+    if (topActionCell) {
       topActionCell.innerHTML = `<span class="role-badge top">👑 トップ</span>`;
     }
 
+    // 入力者2名の表示をパース済みの形に整える
     filled.forEach(f => {
-      const cell = document.getElementById(`action_cell_${f.player}`);
-      if (cell) {
-        cell.innerHTML = `<button type="button" class="btn-confirm disabled" disabled data-player="${f.player}">確定</button>`;
-      }
+      const inp = document.getElementById(`score_input_${f.player}`);
+      if (inp) inp.value = f.val > 0 ? `+${f.val}` : `${f.val}`;
     });
 
     hideError();
     showToast(`トップ(${topPlayer})の点数を ${topScore > 0 ? '+' + topScore : topScore} と計算しました`);
-    broadcastDraftChange(topPlayer); // トッププレイヤー情報を添えて全端末に同期！
+    broadcastDraftChange(topPlayer); // 全端末に計算結果を一括同期！
     return true;
   } 
   // 2. パターン2: 3名とも手動入力済み ➔ 合計0の検証
@@ -543,7 +545,7 @@ function calculateTopScore() {
       return false;
     }
   } else {
-    showError("点数を2名分確定させた状態で「計算」ボタンを押してください。");
+    showError("点数を2名分入力（確定）した状態で「計算」ボタンを押してください。");
     return false;
   }
 }
