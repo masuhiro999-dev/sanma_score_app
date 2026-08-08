@@ -66,6 +66,7 @@ function initData() {
         if (val) {
           pastData = val;
           localStorage.setItem(STORAGE_KEY_PAST, JSON.stringify(pastData));
+          renderPastDataForm();
           refreshAllScreens();
         }
       });
@@ -81,7 +82,10 @@ function refreshAllScreens() {
   const activeTab = document.querySelector(".tab-content.active");
   if (activeTab) {
     if (activeTab.id === "tab-dashboard") renderDashboard();
-    if (activeTab.id === "tab-database") renderDatabase();
+    if (activeTab.id === "tab-database") {
+      renderDatabase();
+      renderPastDataForm();
+    }
   }
 }
 
