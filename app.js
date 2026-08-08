@@ -433,30 +433,39 @@ function calculateTopScore() {
   const filled = [];
   const empty = [];
 
+  // トップの自動計算値を一度除外し、純粋な手動入力者2名を判定
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
-    const rawVal = inputEl ? inputEl.value : "";
-    const parsedVal = parseScoreValue(rawVal);
-    
-    if (parsedVal !== null) {
-      inputEl.value = parsedVal;
-      filled.push({ player, val: parsedVal });
+    const badge = document.getElementById(`badge_${player}`);
+    const rawVal = inputEl ? inputEl.value.trim() : "";
+
+    // 既に「👑 トップ」バッジが付いている、または手動入力されていない項目は未入力(empty)扱いにする
+    const isAlreadyTop = badge && badge.classList.contains("top");
+
+    if (rawVal !== "" && !isAlreadyTop) {
+      const parsedVal = parseScoreValue(rawVal);
+      if (parsedVal !== null) {
+        inputEl.value = parsedVal;
+        filled.push({ player, val: parsedVal });
+      } else {
+        empty.push(player);
+      }
     } else {
       empty.push(player);
     }
   });
 
-  // 2名入力、1名未入力 ➔ 未入力者をトップとして自動計算 ( Top = 0 - (A + B) )
+  // 1. パターン1: 2名の手動入力があり、1名が未入力（または前回トップ） ➔ 正確にトップを自動計算 ( Top = 0 - (A + B) )
   if (filled.length === 2 && empty.length === 1) {
     const topPlayer = empty[0];
     const sumOthers = filled[0].val + filled[1].val;
-    const topScore = 0 - sumOthers;
+    const topScore = 0 - sumOthers; // 例: -15 と -10 ➔ 0 - (-25) = +25
 
     const topInput = document.getElementById(`score_input_${topPlayer}`);
     const topBadge = document.getElementById(`badge_${topPlayer}`);
 
     if (topInput && topBadge) {
-      topInput.value = topScore; // 単純な数値 (例: 35) をセット
+      topInput.value = topScore;
       topInput.style.color = "var(--accent-gold)";
       topBadge.innerHTML = "👑 トップ";
       topBadge.className = "role-badge top";
@@ -475,7 +484,7 @@ function calculateTopScore() {
     broadcastDraftChange(topPlayer); // トッププレイヤー情報を添えて全端末に同期！
     return true;
   } 
-  // 3名入力済み ➔ 検証
+  // 2. パターン2: 3名とも手動入力済み ➔ 合計0の検証
   else if (filled.length === 3) {
     const total = filled.reduce((acc, curr) => acc + curr.val, 0);
     if (total === 0) {
