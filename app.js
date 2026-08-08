@@ -94,7 +94,6 @@ function syncDraftFromCloud(draftData) {
 
   // 1. 参加プレイヤーの同期
   if (Array.isArray(draftData.selectedPlayers)) {
-    // 参加者が変化している場合のみ再描画
     const isSame = selectedPlayers.length === draftData.selectedPlayers.length &&
       selectedPlayers.every((val, index) => val === draftData.selectedPlayers[index]);
     
@@ -105,7 +104,7 @@ function syncDraftFromCloud(draftData) {
     }
   }
 
-  // 2. 入力点数の同期
+  // 2. 入力点数の同期 (勝手な自動計算は走らせない)
   if (draftData.scores && selectedPlayers.length === 3) {
     selectedPlayers.forEach(p => {
       const inputEl = document.getElementById(`score_input_${p}`);
@@ -113,7 +112,7 @@ function syncDraftFromCloud(draftData) {
       const val = draftData.scores[p];
 
       if (inputEl && val !== undefined && val !== null) {
-        // 現在のフォーカス要素以外を書き換え（入力途中の文字化け防止）
+        // 現在フォーカスしている本人以外の入力欄を同期
         if (document.activeElement !== inputEl) {
           inputEl.value = val;
           if (toggleBtn) {
@@ -128,9 +127,6 @@ function syncDraftFromCloud(draftData) {
         }
       }
     });
-
-    // 自動計算を実行
-    calculateTopScore(true); // サイレント計算
   }
 }
 
@@ -432,6 +428,7 @@ function calculateTopScore() {
 
     hideError();
     showToast(`トップ(${topPlayer})の点数を ${topScore > 0 ? '+' + topScore : topScore} と計算しました`);
+    broadcastDraftChange(); // 計算されたトップの点数を全員のスマホ画面にリアルタイム同期！
     return true;
   } 
   // 3名入力済み ➔ 検証
@@ -440,6 +437,7 @@ function calculateTopScore() {
     if (total === 0) {
       hideError();
       showToast("合計0点を確認しました");
+      broadcastDraftChange();
       return true;
     } else {
       showError(`現在の合計が ${total > 0 ? '+' + total : total} になっています。合計が0になるよう修正してください。`);
