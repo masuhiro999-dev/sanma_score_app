@@ -295,33 +295,43 @@ main {
   background: #090d16;
 }
 
-/* 角丸四角のロールバッジ */
-.role-badge {
-  font-size: 0.75rem;
-  padding: 6px 8px;
-  border-radius: 6px; /* 角丸の四角 */
-  text-align: center;
+/* 各自の入力確定ボタン */
+.btn-confirm {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
   font-weight: 700;
+  cursor: pointer;
   white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* 👑 トップ：高級感のあるダークゴールド背景＋黄金王冠＋くっきり白文字 */
+.btn-confirm:active {
+  transform: scale(0.94);
+  background: var(--primary-hover);
+}
+
+.btn-confirm.confirmed {
+  background: #10b981; /* 確定済みは緑色 */
+  color: #fff;
+}
+
+/* 👑 トップ表示バッジ */
 .role-badge.top { 
   background: #78350f; 
   color: #fef08a; 
   border: 1px solid #d97706;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-/* 入力者：スタイリッシュな角丸四角グレーバッジ */
-.role-badge.inputter { 
-  background: #334155; 
-  color: #cbd5e1; 
-  border: 1px solid #475569;
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .btn-group {

@@ -92,20 +92,24 @@ function initData() {
 function syncDraftFromCloud(draftData) {
   if (!draftData) return;
 
-  // 1. 保存完了などでドラフトが空（クリア）になった場合 ➔ 全員のスマホの入力欄を完全リセット！
+  // 1. 保存完了等でドラフトが空（クリア）になった場合 ➔ 全員のスマホの入力欄をリセット！
   if (!draftData.scores || Object.keys(draftData.scores).length === 0) {
     selectedPlayers.forEach(p => {
       const inputEl = document.getElementById(`score_input_${p}`);
-      const badge = document.getElementById(`badge_${p}`);
+      const actionCell = document.getElementById(`action_cell_${p}`);
       const toggleBtn = document.querySelector(`.btn-sign-toggle[data-player="${p}"]`);
 
       if (inputEl) {
         inputEl.value = "";
         inputEl.style.color = "var(--text-main)";
       }
-      if (badge) {
-        badge.textContent = "入力欄";
-        badge.className = "role-badge inputter";
+      if (actionCell) {
+        actionCell.innerHTML = `<button type="button" class="btn-confirm" data-player="${p}">確定</button>`;
+        // 再バインド
+        const newBtn = actionCell.querySelector(".btn-confirm");
+        if (newBtn && inputEl && toggleBtn) {
+          newBtn.addEventListener("click", () => handleConfirmClick(p, inputEl, toggleBtn, newBtn));
+        }
       }
       if (toggleBtn) {
         toggleBtn.textContent = "-";
@@ -128,15 +132,16 @@ function syncDraftFromCloud(draftData) {
     }
   }
 
-  // 3. 入力点数の同期 (受信側で勝手なマイナス化・符号反転は一切行わない)
+  // 3. 確定点数の同期 (受信側は送信された確定済みの数値をそのまま綺麗にセット)
   if (draftData.scores && selectedPlayers.length === 3) {
     selectedPlayers.forEach(p => {
       const inputEl = document.getElementById(`score_input_${p}`);
       const toggleBtn = document.querySelector(`.btn-sign-toggle[data-player="${p}"]`);
+      const actionCell = document.getElementById(`action_cell_${p}`);
       const val = draftData.scores[p];
 
       if (inputEl && val !== undefined && val !== null && val !== "") {
-        // 他の人のスマホ画面に正確な値をセット (入力中の本人以外)
+        // 他端末の同期（フォーカス中でも確定値が届いたら表示）
         if (document.activeElement !== inputEl) {
           inputEl.value = val;
           inputEl.style.color = (draftData.topPlayer === p) ? "var(--accent-gold)" : "var(--text-main)";
@@ -158,15 +163,21 @@ function syncDraftFromCloud(draftData) {
         }
       }
 
-      // バッジ状態の更新
-      const badge = document.getElementById(`badge_${p}`);
-      if (badge) {
+      // トップ表示バッジ または 確定ボタンの同期
+      if (actionCell) {
         if (draftData.topPlayer === p) {
-          badge.innerHTML = "👑 トップ";
-          badge.className = "role-badge top";
+          actionCell.innerHTML = `<span class="role-badge top">👑 トップ</span>`;
         } else {
-          badge.textContent = "入力者";
-          badge.className = "role-badge inputter";
+          // すでに点数が入っていれば「確定済」ボタン
+          if (val !== undefined && val !== null && val !== "") {
+            actionCell.innerHTML = `<button type="button" class="btn-confirm confirmed" data-player="${p}">確定済</button>`;
+          } else {
+            actionCell.innerHTML = `<button type="button" class="btn-confirm" data-player="${p}">確定</button>`;
+          }
+          const confirmBtn = actionCell.querySelector(".btn-confirm");
+          if (confirmBtn && inputEl && toggleBtn) {
+            confirmBtn.addEventListener("click", () => handleConfirmClick(p, inputEl, toggleBtn, confirmBtn));
+          }
         }
       }
     });
@@ -326,6 +337,35 @@ function updateScoreInputArea() {
   renderScoreInputRows();
 }
 
+function handleConfirmClick(player, inputEl, toggleBtn, confirmBtn) {
+  let rawVal = inputEl.value.trim();
+  if (rawVal === "") {
+    showError(`${player}の点数を入力してください`);
+    return;
+  }
+
+  // ボタンが「+」になっていて、先頭に+も-もない場合は+を補完
+  if (toggleBtn.textContent === "+" && !rawVal.startsWith("+") && !rawVal.startsWith("-")) {
+    rawVal = "+" + rawVal;
+  }
+
+  const parsed = parseScoreValue(rawVal);
+  if (parsed === null) {
+    showError("正しい数値を入力してください");
+    return;
+  }
+
+  inputEl.value = parsed > 0 ? `+${parsed}` : `${parsed}`;
+  confirmBtn.classList.add("confirmed");
+  confirmBtn.textContent = "確定済";
+
+  hideError();
+  showToast(`${player}の点数 (${inputEl.value}) を確定・送信しました`);
+  
+  // クラウドへ確定値を送信！
+  broadcastDraftChange();
+}
+
 function renderScoreInputRows() {
   const container = document.getElementById("scoreInputsContainer");
   container.innerHTML = "";
@@ -340,16 +380,19 @@ function renderScoreInputRows() {
         <button type="button" class="btn-sign-toggle" data-player="${player}" title="プラス/マイナス切り替え">-</button>
         <input type="text" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="数字を入力" inputmode="decimal">
       </div>
-      <span class="role-badge inputter" id="badge_${player}">入力欄</span>
+      <div id="action_cell_${player}">
+        <button type="button" class="btn-confirm" data-player="${player}">確定</button>
+      </div>
     `;
 
     container.appendChild(row);
   });
 
-  // ＋/ー 切り替えボタンのイベントリスナー
+  // 各行の「＋/ー 切り替え」および「確定」ボタンイベントの登録
   selectedPlayers.forEach(player => {
     const toggleBtn = container.querySelector(`.btn-sign-toggle[data-player="${player}"]`);
     const inputEl = document.getElementById(`score_input_${player}`);
+    const confirmBtn = container.querySelector(`.btn-confirm[data-player="${player}"]`);
 
     if (toggleBtn && inputEl) {
       toggleBtn.addEventListener("click", () => {
@@ -375,21 +418,11 @@ function renderScoreInputRows() {
             toggleBtn.classList.remove("plus");
           }
         }
-        broadcastDraftChange(); // 符号トグル切替をクラウドへリアルタイム同期
       });
+    }
 
-      // 自分の打鍵入力時にクラウドへリアルタイム同期
-      inputEl.addEventListener("input", () => {
-        const val = inputEl.value.trim();
-        if (val.startsWith("+")) {
-          toggleBtn.textContent = "+";
-          toggleBtn.classList.add("plus");
-        } else {
-          toggleBtn.textContent = "-";
-          toggleBtn.classList.remove("plus");
-        }
-        broadcastDraftChange(); // 打鍵をクラウドへリアルタイム同期
-      });
+    if (confirmBtn && inputEl && toggleBtn) {
+      confirmBtn.addEventListener("click", () => handleConfirmClick(player, inputEl, toggleBtn, confirmBtn));
     }
   });
 }
