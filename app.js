@@ -520,8 +520,8 @@ function calculateTopScore() {
 
     filled.forEach(f => {
       const cell = document.getElementById(`action_cell_${f.player}`);
-      if (cell && !cell.querySelector(".btn-confirm")) {
-        cell.innerHTML = `<button type="button" class="btn-confirm confirmed" data-player="${f.player}">確定済</button>`;
+      if (cell) {
+        cell.innerHTML = `<button type="button" class="btn-confirm disabled" disabled data-player="${f.player}">確定</button>`;
       }
     });
 
