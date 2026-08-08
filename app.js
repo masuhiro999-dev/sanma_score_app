@@ -16,6 +16,7 @@ const firebaseConfig = {
 
 let dbRefGames = null;
 let dbRefPast = null;
+let dbRefDraft = null;
 let isCloudActive = false;
 
 let pastData = {
@@ -27,6 +28,10 @@ let pastData = {
 };
 
 let gameResults = [];
+let currentDraft = {
+  selectedPlayers: [],
+  scores: {}
+};
 
 // Initialize Data & Cloud Realtime Listener
 function initData() {
@@ -46,16 +51,13 @@ function initData() {
       const db = firebase.database();
       dbRefGames = db.ref("gameResults");
       dbRefPast = db.ref("pastData");
+      dbRefDraft = db.ref("currentDraft");
       isCloudActive = true;
 
-      // リアルタイムリスナー (対局データ更新時)
+      // リアルタイムリスナー (対局全般データ更新時)
       dbRefGames.on("value", (snapshot) => {
         const val = snapshot.val();
-        if (val) {
-          gameResults = Array.isArray(val) ? val : Object.values(val);
-        } else {
-          gameResults = [];
-        }
+        gameResults = val ? (Array.isArray(val) ? val : Object.values(val)) : [];
         localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(gameResults));
         refreshAllScreens();
       });
@@ -71,11 +73,84 @@ function initData() {
         }
       });
 
+      // リアルタイムリスナー (各自のスマホ入力・対局選択状態の同期)
+      dbRefDraft.on("value", (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          syncDraftFromCloud(val);
+        }
+      });
+
       console.log("Firebase Realtime Database Connected!");
     } catch (e) {
       console.warn("Firebase initialization skipped or failed:", e);
     }
   }
+}
+
+// クラウドからのドラフト（対局中データ）同期
+function syncDraftFromCloud(draftData) {
+  if (!draftData) return;
+
+  // 1. 参加プレイヤーの同期
+  if (Array.isArray(draftData.selectedPlayers)) {
+    // 参加者が変化している場合のみ再描画
+    const isSame = selectedPlayers.length === draftData.selectedPlayers.length &&
+      selectedPlayers.every((val, index) => val === draftData.selectedPlayers[index]);
+    
+    if (!isSame) {
+      selectedPlayers = draftData.selectedPlayers;
+      renderPlayerSelection();
+      updateScoreInputArea();
+    }
+  }
+
+  // 2. 入力点数の同期
+  if (draftData.scores && selectedPlayers.length === 3) {
+    selectedPlayers.forEach(p => {
+      const inputEl = document.getElementById(`score_input_${p}`);
+      const toggleBtn = document.querySelector(`.btn-sign-toggle[data-player="${p}"]`);
+      const val = draftData.scores[p];
+
+      if (inputEl && val !== undefined && val !== null) {
+        // 現在のフォーカス要素以外を書き換え（入力途中の文字化け防止）
+        if (document.activeElement !== inputEl) {
+          inputEl.value = val;
+          if (toggleBtn) {
+            if (String(val).startsWith("+")) {
+              toggleBtn.textContent = "+";
+              toggleBtn.classList.add("plus");
+            } else {
+              toggleBtn.textContent = "-";
+              toggleBtn.classList.remove("plus");
+            }
+          }
+        }
+      }
+    });
+
+    // 自動計算を実行
+    calculateTopScore(true); // サイレント計算
+  }
+}
+
+// 自分の入力をクラウドへリアルタイム送信
+function broadcastDraftChange() {
+  if (!isCloudActive || !dbRefDraft) return;
+
+  const scores = {};
+  selectedPlayers.forEach(p => {
+    const inputEl = document.getElementById(`score_input_${p}`);
+    if (inputEl) {
+      scores[p] = inputEl.value;
+    }
+  });
+
+  dbRefDraft.set({
+    selectedPlayers: selectedPlayers,
+    scores: scores,
+    timestamp: Date.now()
+  });
 }
 
 function refreshAllScreens() {
@@ -93,6 +168,14 @@ function saveGameResults() {
   localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(gameResults));
   if (isCloudActive && dbRefGames) {
     dbRefGames.set(gameResults);
+  }
+  // 保存成功時にドラフトをクリア
+  if (isCloudActive && dbRefDraft) {
+    dbRefDraft.set({
+      selectedPlayers: selectedPlayers,
+      scores: {},
+      timestamp: Date.now()
+    });
   }
 }
 
@@ -182,6 +265,7 @@ function renderPlayerSelection() {
       }
       renderPlayerSelection();
       updateScoreInputArea();
+      broadcastDraftChange(); // プレイヤー選択状態をクラウド同期
     });
 
     grid.appendChild(card);
@@ -191,7 +275,7 @@ function renderPlayerSelection() {
 function updateScoreInputArea() {
   const card = document.getElementById("scoreInputCard");
   const errorMsg = document.getElementById("validationError");
-  errorMsg.style.display = "none";
+  if (errorMsg) errorMsg.style.display = "none";
 
   if (selectedPlayers.length !== 3) {
     card.style.display = "none";
@@ -231,22 +315,18 @@ function renderScoreInputRows() {
       toggleBtn.addEventListener("click", () => {
         let val = inputEl.value.trim();
         if (val.startsWith("+")) {
-          // プラスからマイナスへ
           inputEl.value = val.substring(1);
           toggleBtn.textContent = "-";
           toggleBtn.classList.remove("plus");
         } else if (val.startsWith("-")) {
-          // マイナスからプラスへ
           inputEl.value = "+" + val.substring(1);
           toggleBtn.textContent = "+";
           toggleBtn.classList.add("plus");
         } else if (val !== "") {
-          // 数字のみ（デフォルトマイナス）からプラスへ
           inputEl.value = "+" + val;
           toggleBtn.textContent = "+";
           toggleBtn.classList.add("plus");
         } else {
-          // 空の場合、トグルの表示だけ切り替え
           if (toggleBtn.textContent === "-") {
             toggleBtn.textContent = "+";
             toggleBtn.classList.add("plus");
@@ -255,9 +335,10 @@ function renderScoreInputRows() {
             toggleBtn.classList.remove("plus");
           }
         }
+        broadcastDraftChange(); // 符号トグル切替をクラウドへリアルタイム同期
       });
 
-      // 入力時に符号を検出してボタン表記を自動連動
+      // 自分の打鍵入力時にクラウドへリアルタイム同期
       inputEl.addEventListener("input", () => {
         const val = inputEl.value.trim();
         if (val.startsWith("+")) {
@@ -267,6 +348,7 @@ function renderScoreInputRows() {
           toggleBtn.textContent = "-";
           toggleBtn.classList.remove("plus");
         }
+        broadcastDraftChange(); // 打鍵をクラウドへリアルタイム同期
       });
     }
   });
