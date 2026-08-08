@@ -381,7 +381,7 @@ function renderScoreInputRows() {
       <label>${player}</label>
       <div class="score-input-wrap">
         <button type="button" class="btn-sign-toggle" data-player="${player}" title="プラス/マイナス切り替え">-</button>
-        <input type="text" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="数字を入力" inputmode="decimal">
+        <input type="text" id="score_input_${player}" class="player-score-input" data-player="${player}" placeholder="数字を入力" inputmode="numeric" pattern="[0-9]*">
       </div>
       <div id="action_cell_${player}">
         <button type="button" class="btn-confirm" data-player="${player}">確定</button>
