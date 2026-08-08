@@ -310,14 +310,20 @@ main {
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.btn-confirm:active {
+.btn-confirm:active:not(:disabled) {
   transform: scale(0.94);
   background: var(--primary-hover);
 }
 
-.btn-confirm.confirmed {
-  background: #10b981; /* 確定済みは緑色 */
-  color: #fff;
+/* 確定済み・グレーアウト（無効化）スタイル */
+.btn-confirm:disabled,
+.btn-confirm.disabled {
+  background: #334155 !important;
+  color: #64748b !important;
+  border: 1px solid #475569 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  opacity: 0.7;
 }
 
 /* 👑 トップ表示バッジ */

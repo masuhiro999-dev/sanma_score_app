@@ -168,9 +168,9 @@ function syncDraftFromCloud(draftData) {
         if (draftData.topPlayer === p) {
           actionCell.innerHTML = `<span class="role-badge top">👑 トップ</span>`;
         } else {
-          // すでに点数が入っていれば「確定済」ボタン
+          // すでに点数が入っていれば「確定」ボタンをグレーアウト（disabled）
           if (val !== undefined && val !== null && val !== "") {
-            actionCell.innerHTML = `<button type="button" class="btn-confirm confirmed" data-player="${p}">確定済</button>`;
+            actionCell.innerHTML = `<button type="button" class="btn-confirm disabled" disabled data-player="${p}">確定</button>`;
           } else {
             actionCell.innerHTML = `<button type="button" class="btn-confirm" data-player="${p}">確定</button>`;
           }
@@ -356,8 +356,11 @@ function handleConfirmClick(player, inputEl, toggleBtn, confirmBtn) {
   }
 
   inputEl.value = parsed > 0 ? `+${parsed}` : `${parsed}`;
-  confirmBtn.classList.add("confirmed");
-  confirmBtn.textContent = "確定済";
+  
+  // 「確定」表記のままグレーアウト（disabled）に！
+  confirmBtn.textContent = "確定";
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add("disabled");
 
   hideError();
   showToast(`${player}の点数 (${inputEl.value}) を確定・送信しました`);
@@ -388,7 +391,7 @@ function renderScoreInputRows() {
     container.appendChild(row);
   });
 
-  // 各行の「＋/ー 切り替え」および「確定」ボタンイベントの登録
+  // 各行の「＋/ー 切り替え」および「確定」ボタン・入力修正時の再活性化リスナー
   selectedPlayers.forEach(player => {
     const toggleBtn = container.querySelector(`.btn-sign-toggle[data-player="${player}"]`);
     const inputEl = document.getElementById(`score_input_${player}`);
@@ -417,6 +420,19 @@ function renderScoreInputRows() {
             toggleBtn.textContent = "-";
             toggleBtn.classList.remove("plus");
           }
+        }
+        // 修正時はボタンを青色（活性化）に戻す
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove("disabled");
+        }
+      });
+      
+      // 点数を打ち直した場合は確定ボタンを青色（活性化）に戻す
+      inputEl.addEventListener("input", () => {
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove("disabled");
         }
       });
     }
@@ -466,19 +482,18 @@ function calculateTopScore() {
   const filled = [];
   const empty = [];
 
-  // トップの自動計算値を一度除外し、純粋な手動入力者2名を判定
   selectedPlayers.forEach(player => {
     const inputEl = document.getElementById(`score_input_${player}`);
-    const badge = document.getElementById(`badge_${player}`);
+    const actionCell = document.getElementById(`action_cell_${player}`);
     const rawVal = inputEl ? inputEl.value.trim() : "";
 
     // 既に「👑 トップ」バッジが付いている、または手動入力されていない項目は未入力(empty)扱いにする
-    const isAlreadyTop = badge && badge.classList.contains("top");
+    const isAlreadyTop = actionCell && actionCell.querySelector(".role-badge.top");
 
     if (rawVal !== "" && !isAlreadyTop) {
       const parsedVal = parseScoreValue(rawVal);
       if (parsedVal !== null) {
-        inputEl.value = parsedVal;
+        inputEl.value = parsedVal > 0 ? `+${parsedVal}` : `${parsedVal}`;
         filled.push({ player, val: parsedVal });
       } else {
         empty.push(player);
@@ -495,20 +510,18 @@ function calculateTopScore() {
     const topScore = 0 - sumOthers; // 例: -15 と -10 ➔ 0 - (-25) = +25
 
     const topInput = document.getElementById(`score_input_${topPlayer}`);
-    const topBadge = document.getElementById(`badge_${topPlayer}`);
+    const topActionCell = document.getElementById(`action_cell_${topPlayer}`);
 
-    if (topInput && topBadge) {
-      topInput.value = topScore;
+    if (topInput && topActionCell) {
+      topInput.value = topScore > 0 ? `+${topScore}` : `${topScore}`;
       topInput.style.color = "var(--accent-gold)";
-      topBadge.innerHTML = "👑 トップ";
-      topBadge.className = "role-badge top";
+      topActionCell.innerHTML = `<span class="role-badge top">👑 トップ</span>`;
     }
 
     filled.forEach(f => {
-      const b = document.getElementById(`badge_${f.player}`);
-      if (b) {
-        b.textContent = "入力者";
-        b.className = "role-badge inputter";
+      const cell = document.getElementById(`action_cell_${f.player}`);
+      if (cell && !cell.querySelector(".btn-confirm")) {
+        cell.innerHTML = `<button type="button" class="btn-confirm confirmed" data-player="${f.player}">確定済</button>`;
       }
     });
 
@@ -530,7 +543,7 @@ function calculateTopScore() {
       return false;
     }
   } else {
-    showError("点数を2名分入力した状態で「計算」ボタンを押してください。");
+    showError("点数を2名分確定させた状態で「計算」ボタンを押してください。");
     return false;
   }
 }
