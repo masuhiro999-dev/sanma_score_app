@@ -92,7 +92,31 @@ function initData() {
 function syncDraftFromCloud(draftData) {
   if (!draftData) return;
 
-  // 1. 参加プレイヤーの同期
+  // 1. 保存完了などでドラフトが空（クリア）になった場合 ➔ 全員のスマホの入力欄を完全リセット！
+  if (!draftData.scores || Object.keys(draftData.scores).length === 0) {
+    selectedPlayers.forEach(p => {
+      const inputEl = document.getElementById(`score_input_${p}`);
+      const badge = document.getElementById(`badge_${p}`);
+      const toggleBtn = document.querySelector(`.btn-sign-toggle[data-player="${p}"]`);
+
+      if (inputEl) {
+        inputEl.value = "";
+        inputEl.style.color = "var(--text-main)";
+      }
+      if (badge) {
+        badge.textContent = "入力欄";
+        badge.className = "role-badge inputter";
+      }
+      if (toggleBtn) {
+        toggleBtn.textContent = "-";
+        toggleBtn.classList.remove("plus");
+      }
+    });
+    hideError();
+    return;
+  }
+
+  // 2. 参加プレイヤーの同期
   if (Array.isArray(draftData.selectedPlayers)) {
     const isSame = selectedPlayers.length === draftData.selectedPlayers.length &&
       selectedPlayers.every((val, index) => val === draftData.selectedPlayers[index]);
@@ -104,19 +128,21 @@ function syncDraftFromCloud(draftData) {
     }
   }
 
-  // 2. 入力点数の同期 (勝手な自動計算は走らせない)
+  // 3. 入力点数の同期 (受信側で勝手なマイナス化・符号反転は一切行わない)
   if (draftData.scores && selectedPlayers.length === 3) {
     selectedPlayers.forEach(p => {
       const inputEl = document.getElementById(`score_input_${p}`);
       const toggleBtn = document.querySelector(`.btn-sign-toggle[data-player="${p}"]`);
       const val = draftData.scores[p];
 
-      if (inputEl && val !== undefined && val !== null) {
-        // 現在フォーカスしている本人以外の入力欄を同期
+      if (inputEl && val !== undefined && val !== null && val !== "") {
+        // 他の人のスマホ画面に正確な値をセット (入力中の本人以外)
         if (document.activeElement !== inputEl) {
           inputEl.value = val;
+          inputEl.style.color = (draftData.topPlayer === p) ? "var(--accent-gold)" : "var(--text-main)";
+          
           if (toggleBtn) {
-            if (String(val).startsWith("+")) {
+            if (String(val).startsWith("+") || Number(val) > 0) {
               toggleBtn.textContent = "+";
               toggleBtn.classList.add("plus");
             } else {
@@ -125,13 +151,30 @@ function syncDraftFromCloud(draftData) {
             }
           }
         }
+      } else if (inputEl && (val === "" || val === null)) {
+        if (document.activeElement !== inputEl) {
+          inputEl.value = "";
+          inputEl.style.color = "var(--text-main)";
+        }
+      }
+
+      // バッジ状態の更新
+      const badge = document.getElementById(`badge_${p}`);
+      if (badge) {
+        if (draftData.topPlayer === p) {
+          badge.innerHTML = "👑 トップ";
+          badge.className = "role-badge top";
+        } else {
+          badge.textContent = "入力者";
+          badge.className = "role-badge inputter";
+        }
       }
     });
   }
 }
 
-// 自分の入力をクラウドへリアルタイム送信
-function broadcastDraftChange() {
+// 自分の入力・計算結果をクラウドへリアルタイム送信
+function broadcastDraftChange(topPlayerName = null) {
   if (!isCloudActive || !dbRefDraft) return;
 
   const scores = {};
@@ -145,6 +188,7 @@ function broadcastDraftChange() {
   dbRefDraft.set({
     selectedPlayers: selectedPlayers,
     scores: scores,
+    topPlayer: topPlayerName,
     timestamp: Date.now()
   });
 }
@@ -428,7 +472,7 @@ function calculateTopScore() {
 
     hideError();
     showToast(`トップ(${topPlayer})の点数を ${topScore > 0 ? '+' + topScore : topScore} と計算しました`);
-    broadcastDraftChange(); // 計算されたトップの点数を全員のスマホ画面にリアルタイム同期！
+    broadcastDraftChange(topPlayer); // トッププレイヤー情報を添えて全端末に同期！
     return true;
   } 
   // 3名入力済み ➔ 検証
