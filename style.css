@@ -507,6 +507,49 @@ td.cell-empty {
 }
 
 /* ==========================================
+   Line Chart Styles
+   ========================================== */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: var(--radius-sm);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.legend-color-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.chart-container {
+  width: 100%;
+  overflow-x: auto;
+  background: #0f172a;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 12px 8px;
+}
+
+.chart-container svg {
+  display: block;
+  margin: 0 auto;
+}
+
+/* ==========================================
    3. Database & Past Data Styles
    ========================================== */
 .editable-cell {
