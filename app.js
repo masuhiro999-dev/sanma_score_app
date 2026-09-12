@@ -780,8 +780,10 @@ function renderDashboard() {
     tbody.appendChild(tr);
   });
 
-  // Render Line Chart
-  renderLineChart(dayGames);
+  // Render Line Chart (DOMが完全に展開された後に描画)
+  setTimeout(() => {
+    renderLineChart(dayGames);
+  }, 50);
 }
 
 // プレイヤーカラー定義（5名）
@@ -811,13 +813,13 @@ function renderLineChart(dayGames) {
     legendContainer.appendChild(item);
   });
 
-  if (dayGames.length === 0) {
+  if (!dayGames || dayGames.length === 0) {
     container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 30px;">本日の対局データはありません</div>`;
     return;
   }
 
   // 2. 昇順（第1局 ➔ 第N局）にソート
-  const sortedGames = [...dayGames].sort((a, b) => a.Game_ID - b.Game_ID);
+  const sortedGames = [...dayGames].sort((a, b) => Number(a.Game_ID) - Number(b.Game_ID));
   const totalGamesCount = sortedGames.length;
 
   // 各局終了時点での累計点数を計算 (インデックス0は開始時点: 局0, 累積0)
@@ -832,7 +834,10 @@ function renderLineChart(dayGames) {
     PLAYERS.forEach(p => {
       const val = g[p];
       if (val !== null && val !== undefined && val !== "") {
-        runningTotal[p] += Number(val);
+        const num = Number(val);
+        if (!isNaN(num)) {
+          runningTotal[p] += num;
+        }
       }
       cumulativeScores[p].push(runningTotal[p]);
     });
@@ -848,8 +853,8 @@ function renderLineChart(dayGames) {
     });
   });
 
-  // Y軸範囲に少し余裕を持たせる
-  const paddingScore = 20;
+  // Y軸範囲に余裕を持たせる
+  let paddingScore = 20;
   minScore = Math.floor((minScore - paddingScore) / 10) * 10;
   maxScore = Math.ceil((maxScore + paddingScore) / 10) * 10;
   if (minScore === maxScore) {
@@ -858,7 +863,8 @@ function renderLineChart(dayGames) {
   }
 
   // SVGサイズ設定
-  const svgWidth = Math.max(600, (totalGamesCount + 1) * 75);
+  const containerWidth = container.clientWidth > 0 ? container.clientWidth - 32 : 600;
+  const svgWidth = Math.max(containerWidth, (totalGamesCount + 1) * 75);
   const svgHeight = 280;
   const paddingLeft = 50;
   const paddingRight = 30;
@@ -875,14 +881,14 @@ function renderLineChart(dayGames) {
   // SVG生成開始
   let svgHtml = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
 
-  // グリッド線 ＆ Y軸ラベル（5分割）
+  // 背景グリッド ＆ Y軸ラベル
   const ySteps = 5;
   for (let i = 0; i <= ySteps; i++) {
     const scoreVal = minScore + ((maxScore - minScore) / ySteps) * i;
     const yPos = getY(scoreVal);
-    const strokeDash = scoreVal === 0 ? "" : "stroke-dasharray='3 3'";
-    const strokeColor = scoreVal === 0 ? "#94a3b8" : "#334155";
-    const strokeWidth = scoreVal === 0 ? "1.5" : "1";
+    const strokeDash = Math.round(scoreVal) === 0 ? "" : "stroke-dasharray='3 3'";
+    const strokeColor = Math.round(scoreVal) === 0 ? "#94a3b8" : "#334155";
+    const strokeWidth = Math.round(scoreVal) === 0 ? "1.5" : "1";
 
     // 横グリッド線
     svgHtml += `<line x1="${paddingLeft}" y1="${yPos}" x2="${svgWidth - paddingRight}" y2="${yPos}" stroke="${strokeColor}" stroke-width="${strokeWidth}" ${strokeDash} />`;
@@ -904,15 +910,15 @@ function renderLineChart(dayGames) {
   // 各プレイヤーの折れ線 ＆ ドット描画
   PLAYERS.forEach(p => {
     const scores = cumulativeScores[p];
-    const points = scores.map((score, idx) => `${getX(idx)},${getY(score)}`).join(" ");
+    const points = scores.map((score, idx) => `${getX(idx).toFixed(1)},${getY(score).toFixed(1)}`).join(" ");
 
     // ポリライン（折れ線）
     svgHtml += `<polyline points="${points}" fill="none" stroke="${PLAYER_COLORS[p]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`;
 
     // 点（ドット）
     scores.forEach((score, idx) => {
-      const cx = getX(idx);
-      const cy = getY(score);
+      const cx = getX(idx).toFixed(1);
+      const cy = getY(score).toFixed(1);
       svgHtml += `<circle cx="${cx}" cy="${cy}" r="4" fill="${PLAYER_COLORS[p]}" stroke="#0f172a" stroke-width="1.5" />`;
     });
   });

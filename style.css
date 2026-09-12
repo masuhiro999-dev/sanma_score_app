@@ -537,11 +537,13 @@ td.cell-empty {
 
 .chart-container {
   width: 100%;
+  min-height: 290px;
   overflow-x: auto;
   background: #0f172a;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 12px 8px;
+  box-sizing: border-box;
 }
 
 .chart-container svg {
